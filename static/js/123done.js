@@ -57,69 +57,50 @@ $(document).ready(function() {
 
     // register callbacks with the persona API to be invoked when
     // the user logs in or out.
-    navigator.id.watch({
-      // pass the currently logged in email address from the server's
-      // session. This will cause onlogin/onlogout to not be invoked
-      // when we're up to date.
-      loggedInUser: loggedInEmail,
-      // onlogin will be called any time the user logs in
-      onlogin: function(assertion) {
-        loginAssertion = assertion;
-
-        // display spinner
-        $("section.todo ul").css('display', 'none');
-        $("section.todo form").css('display', 'none');
-        $("ul.loginarea li").css('display', 'none');
-        $(".loginarea .loading").css('display', 'block');
-        $(".todo .loading").css('display', 'block');
-
-        verifyAssertion(assertion, function(r) {
-          loggedInEmail = r.email;
-          loginAssertion = null;
-          updateUI(loggedInEmail);
-          updateListArea(loggedInEmail);
-          State.merge();
-        }, function(err) {
-          alert("failed to verify assertion: " + err);
-          loggedInEmail = null;
-          loginAssertion = null;
-          updateUI(loggedInEmail);
-          updateListArea(loggedInEmail);
-        });
-      },
-      // onlogout will be called any time the user logs out
-      onlogout: function() {
-        loggedInEmail = null;
-        updateUI(loggedInEmail);
-        updateListArea(loggedInEmail);
-
-        // clear items from the dom at logout
-        $("#todolist > li").remove();
-        State.save();
-
-        // don't display the warning icon at logout time, but wait until the user
-        // makes a change to her tasks
-        $("#dataState > div").css('display', 'none');
-
-        // upon logout, make an api request to tear the user's session down
-        $.post('/api/logout');
-
-      },
-      // onready will be called as soon as persona has loaded, at this
-      // point we can display our login buttons.
-      onready: function() {
-        // Only update the UI if no assertion is being verified
-        if (null === loginAssertion) {
-          updateUI(loggedInEmail);
-          updateListArea(loggedInEmail);
-        }
-
-        // display current saved state
-        State.load();
-      }
+    navigator.id.ready(function (email) {
+      login(email);
     });
 
-    // upon click of signin button call navigator.id.request()
+    ready(loggedInEmail);
+
+    function login(email) {
+      loggedInEmail = email;
+      updateUI(loggedInEmail);
+      updateListArea(loggedInEmail);
+
+      State.merge();
+    }
+
+    function ready(email) {
+      // Only update the UI if no assertion is being verified
+      loggedInEmail = email;
+
+      updateUI(loggedInEmail);
+      updateListArea(loggedInEmail);
+
+      // display current saved state
+      State.load();
+    }
+
+    function logout() {
+      loggedInEmail = null;
+      updateUI(loggedInEmail);
+      updateListArea(loggedInEmail);
+
+      // clear items from the dom at logout
+      $("#todolist > li").remove();
+      State.save();
+
+      // don't display the warning icon at logout time, but wait until the user
+      // makes a change to her tasks
+      $("#dataState > div").css('display', 'none');
+
+      document.location.search = '';
+
+      // upon logout, make an api request to tear the user's session down
+      $.post('/api/logout');
+    }
+
     $('button').click(function(ev) {
       ev.preventDefault();
 
@@ -127,26 +108,14 @@ $(document).ready(function() {
       // re-enabled when the assertion passed into onlogin is verified,
       // or if the user cancels the dialog.
       $("button").attr('disabled', 'disabled').css('opacity', '0.5');
-      navigator.id.request({
-        termsOfService: '/tos.txt',
-        privacyPolicy: '/pp.txt',
-        siteName: "123done",
-        backgroundColor: "#cdd7d9",
-        allowRedirect: true,
-// XXX: we need SSL to display a siteLogo in dialog. Must get certificates.
-// siteLogo: "/img/logo100.png",
-        oncancel: function() {
-          // when the user cancels the persona dialog, let's re-enable the
-          // sign-in button
-          $("button").removeAttr('disabled').css('opacity', '1');
-        }
-      });
+      navigator.id.signin();
     });
 
     // upon click of logout link navigator.id.logout()
     $("#loggedin a").click(function(ev) {
       ev.preventDefault();
-      navigator.id.logout();
+
+      logout();
     });
   });
 });

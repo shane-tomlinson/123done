@@ -118,4 +118,8 @@ app.get('/api/todos/get', checkAuth, function(req, res) {
 
 app.use(express.static(__dirname + "/static"));
 
-app.listen(process.env['PORT'] || 8080, '0.0.0.0');
+var port = process.env['PORT'] || 8080;
+
+app.listen(port, '0.0.0.0', function () {
+  console.log('listening on port: %s', port);
+});
