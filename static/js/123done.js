@@ -60,15 +60,44 @@ $(document).ready(function() {
 
       // upon logout, make an api request to tear the user's session down
       $.post('/api/logout');
-
     };
 
     $('button.signin').click(function(ev) {
-      window.location = '/api/login';
+      $.getJSON('/api/login')
+        .done(function (data) {
+          navigator.mozAccounts.get({
+            page: 'signin',
+            redirectTo: data.redirect,
+            done: function(err, result) {
+              if (err) {
+                return console.log('signin err: %s', JSON.stringify(err));
+              }
+
+              if (result.command === 'oauth_complete') {
+                document.location.href = result.data.redirect;
+              }
+            }
+          });
+      });
     });
 
     $('button.signup').click(function(ev) {
-      window.location = '/api/signup';
+      $.getJSON('/api/signup')
+        .done(function (data) {
+          navigator.mozAccounts.get({
+            page: 'signup',
+            redirectTo: data.redirect,
+            done: function(err, result) {
+              if (err) {
+                return console.log('signin err: %s', JSON.stringify(err));
+              }
+
+              if (result.command === 'oauth_complete') {
+                document.location.href = result.data.redirect;
+              }
+            }
+          });
+        });
     });
 
     // upon click of logout link navigator.id.logout()

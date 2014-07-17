@@ -20,7 +20,7 @@ function toQueryString(obj) {
   return "?" + fields.join("&");
 }
 
-function redirectUrl(action, nonce, email, preVerifyToken) {
+function getOAuthInfo(action, nonce, email, preVerifyToken) {
   var oauthParams = {
     client_id: config.client_id,
     redirect_uri: config.redirect_uri,
@@ -37,7 +37,20 @@ function redirectUrl(action, nonce, email, preVerifyToken) {
     oauthParams.preVerifyToken = preVerifyToken;
   }
 
-  return config.auth_uri + toQueryString(oauthParams);
+  return oauthParams;
+}
+
+function redirectUrl(action, nonce, email, preVerifyToken) {
+  var oauthInfo = getOAuthInfo(action, nonce, email, preVerifyToken);
+
+  return config.auth_uri + toQueryString(oauthInfo);
+}
+
+function generateAndSaveNonce(req) {
+  var nonce = crypto.randomBytes(32).toString('hex');
+  oauthFlows[nonce] = true;
+  req.session.state = nonce;
+  return nonce;
 }
 
 module.exports = function(app, db) {
@@ -54,20 +67,36 @@ module.exports = function(app, db) {
 
   // begin a new oauth log in flow
   app.get('/api/login', function(req, res) {
-    var nonce = crypto.randomBytes(32).toString('hex');
-    oauthFlows[nonce] = true;
-    req.session.state = nonce;
+    var nonce = generateAndSaveNonce(req);
     var url = redirectUrl("signin", nonce);
-    return res.redirect(url);
+    res.format({
+      'text/html': function () {
+        res.redirect(url);
+      },
+
+      'application/json': function () {
+        res.json({
+          redirect: url
+        });
+      }
+    });
   });
 
   // begin a new oauth sign up flow
   app.get('/api/signup', function(req, res) {
-    var nonce = crypto.randomBytes(32).toString('hex');
-    oauthFlows[nonce] = true;
-    req.session.state = nonce;
+    var nonce = generateAndSaveNonce(req);
     var url = redirectUrl("signup", nonce);
-    return res.redirect(url);
+    res.format({
+      'text/html': function () {
+        res.redirect(url);
+      },
+
+      'application/json': function () {
+        res.json({
+          redirect: url
+        });
+      }
+    });
   });
 
   app.get('/api/preverified-signup', function(req, res) {
@@ -77,9 +106,7 @@ module.exports = function(app, db) {
     // the user making the request is the current user.
     preVerifyTokenGenerator.generate(email)
       .then(function (preVerifyToken) {
-        var nonce = crypto.randomBytes(32).toString('hex');
-        oauthFlows[nonce] = true;
-        req.session.state = nonce;
+        var nonce = generateAndSaveNonce(req);
         var url = redirectUrl("signup", nonce, email, preVerifyToken);
         return res.redirect(url);
       });
