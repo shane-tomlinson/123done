@@ -62,42 +62,35 @@ $(document).ready(function() {
       $.post('/api/logout');
     };
 
-    $('button.signin').click(function(ev) {
-      $.getJSON('/api/login')
-        .done(function (data) {
-          navigator.mozAccounts.get({
-            page: 'signin',
-            redirectTo: data.redirect,
-            done: function(err, result) {
-              if (err) {
-                return console.log('signin err: %s', JSON.stringify(err));
-              }
+    function authenticate (endpoint, flow) {
+      if (window.location.href.indexOf('iframe') > -1) {
+        $.getJSON('/api/' + endpoint)
+          .done(function (data) {
+            navigator.mozAccounts.get({
+              page: flow,
+              redirectTo: data.redirect,
+              done: function(err, result) {
+                if (err) {
+                  return console.log('iframe auth err: %s', JSON.stringify(err));
+                }
 
-              if (result.command === 'oauth_complete') {
-                document.location.href = result.data.redirect;
+                if (result.command === 'oauth_complete') {
+                  document.location.href = result.data.redirect;
+                }
               }
-            }
-          });
-      });
+            });
+        });
+      } else {
+        window.location = '/api/' + endpoint;
+      }
+    }
+
+    $('button.signin').click(function(ev) {
+      authenticate('login', 'signin');
     });
 
     $('button.signup').click(function(ev) {
-      $.getJSON('/api/signup')
-        .done(function (data) {
-          navigator.mozAccounts.get({
-            page: 'signup',
-            redirectTo: data.redirect,
-            done: function(err, result) {
-              if (err) {
-                return console.log('signin err: %s', JSON.stringify(err));
-              }
-
-              if (result.command === 'oauth_complete') {
-                document.location.href = result.data.redirect;
-              }
-            }
-          });
-        });
+      authenticate('signup', 'signup');
     });
 
     // upon click of logout link navigator.id.logout()

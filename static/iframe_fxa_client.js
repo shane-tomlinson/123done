@@ -120,6 +120,7 @@
       var data = parsed.data;
 
       var handler = this.commands[command] || this.commands.ignore;
+      console.log("message: %s %s", command, JSON.stringify(data));
       handler.call(this, command, data);
     },
 
