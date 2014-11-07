@@ -78,6 +78,7 @@
 
 
       var iframe = createElement('iframe', {
+        id: 'fxa',
         src: getIframeSrc(options),
         width: '600',
         height: '400',
