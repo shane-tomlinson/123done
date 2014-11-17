@@ -66,18 +66,16 @@ $(document).ready(function() {
       if (window.location.href.indexOf('iframe') > -1) {
         $.getJSON('/api/' + endpoint)
           .done(function (data) {
-            navigator.mozAccounts.get({
-              page: flow,
-              redirectTo: data.redirect,
-              done: function(err, result) {
-                if (err) {
-                  return console.log('iframe auth err: %s', JSON.stringify(err));
-                }
-
-                if (result.command === 'oauth_complete') {
-                  document.location.href = result.data.redirect;
-                }
+            debugger;
+            var relierClient = new FxaRelierClient({
+              window: window
+            });
+            relierClient.auth.lightbox[flow]().then(function (result) {
+              if (result.command === 'oauth_complete') {
+                document.location.href = result.data.redirect;
               }
+            }, function (err) {
+              console.log('iframe auth err: %s', JSON.stringify(err));
             });
         });
       } else {
@@ -86,11 +84,11 @@ $(document).ready(function() {
     }
 
     $('button.signin').click(function(ev) {
-      authenticate('login', 'signin');
+      authenticate('login', 'signIn');
     });
 
     $('button.signup').click(function(ev) {
-      authenticate('signup', 'signup');
+      authenticate('signup', 'signUp');
     });
 
     // upon click of logout link navigator.id.logout()
