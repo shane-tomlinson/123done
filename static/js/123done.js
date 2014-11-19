@@ -66,9 +66,9 @@ $(document).ready(function() {
       if (window.location.href.indexOf('iframe') > -1) {
         $.getJSON('/api/' + endpoint)
           .done(function (data) {
-            debugger;
             var relierClient = new FxaRelierClient({
-              window: window
+              window: window,
+              fxaHost: 'http://127.0.0.1:3030'
             });
             relierClient.auth.lightbox[flow]().then(function (result) {
               if (result.command === 'oauth_complete') {

@@ -1311,9 +1311,25 @@ define("components/almond/almond", function(){});
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
+define('client/auth/constants',[], function () {
+  
+
+  return {
+    DEFAULT_FXA_HOST: 'https://accounts.firefox.com',
+    SIGNIN_ENDPOINT: 'oauth/signin',
+    SIGNUP_ENDPOINT: 'oauth/signup'
+  };
+});
+
+
+
+/* This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
 /*globals define*/
 
-define('client/lib/auth/lightbox/lightbox',[
+define('client/auth/lightbox/lightbox',[
 ], function () {
   
 
@@ -1343,7 +1359,7 @@ define('client/lib/auth/lightbox/lightbox',[
 
 
   function Lightbox(options) {
-    this._options = options;
+    options = options || {};
 
     this._window = options.window;
     this._iframeHost = options.iframeHost;
@@ -1414,7 +1430,7 @@ define('client/lib/auth/lightbox/lightbox',[
 
 /*globals define*/
 
-define('client/lib/auth/lightbox/iframe_channel',[
+define('client/auth/lightbox/iframe_channel',[
   'p-promise'
 ], function (p) {
   
@@ -1440,6 +1456,8 @@ define('client/lib/auth/lightbox/iframe_channel',[
 
 
   function IFrameChannel(options) {
+    options = options || {};
+
     this._contentWindow = options.contentWindow;
     this._window = options.window;
     this._iframeHost = options.iframeHost;
@@ -1516,15 +1534,13 @@ define('client/lib/auth/lightbox/iframe_channel',[
 
 /*globals define*/
 
-define('client/lib/auth/lightbox',[
+define('client/auth/lightbox/api',[
   'p-promise',
-  './lightbox/lightbox',
-  './lightbox/iframe_channel'
-], function (p, Lightbox, IFrameChannel) {
+  '../constants',
+  './lightbox',
+  './iframe_channel'
+], function (p, Constants, Lightbox, IFrameChannel) {
   
-
-  var FXA_HOST = 'http://127.0.0.1:3030';
-
 
   function openLightbox(page) {
     /*jshint validthis: true*/
@@ -1532,18 +1548,17 @@ define('client/lib/auth/lightbox',[
       return p.reject(new Error('lightbox already open'));
     }
 
-    var window = this._options.window || window;
-
     this._lightbox = new Lightbox({
+      iframeHost: this._fxaHost,
       page: page,
-      window: window
+      window: this._window
     });
     this._lightbox.load();
 
     this._iframeChannel = new IFrameChannel({
-      iframeHost: FXA_HOST,
+      iframeHost: this._fxaHost,
       contentWindow: this._lightbox.getContentWindow(),
-      window: window
+      window: this._window
     });
 
     var self = this;
@@ -1555,16 +1570,19 @@ define('client/lib/auth/lightbox',[
   }
 
   function LightboxAPI(options) {
-    this._options = options || {};
+    options = options || {};
+
+    this._fxaHost = options.fxaHost || Constants.DEFAULT_FXA_HOST;
+    this._window = options.window || window;
   }
 
   LightboxAPI.prototype = {
     signIn: function () {
-      return openLightbox.call(this, 'signin');
+      return openLightbox.call(this, Constants.SIGNIN_ENDPOINT);
     },
 
     signUp: function () {
-      return openLightbox.call(this, 'signup');
+      return openLightbox.call(this, Constants.SIGNUP_ENDPOINT);
     },
 
     unload: function () {
@@ -1590,13 +1608,13 @@ define('client/lib/auth/lightbox',[
 
 define('client/FxaRelierClient',[
   'p-promise',
-  'client/lib/auth/lightbox'
-], function (p, AuthLightBoxClient) {
+  'client/auth/lightbox/api'
+], function (p, LightboxAPI) {
   
 
   function FxaRelierClient(options) {
     this.auth = {
-      lightbox: new AuthLightBoxClient(options)
+      lightbox: new LightboxAPI(options)
     };
   }
 
