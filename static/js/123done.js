@@ -67,13 +67,16 @@ $(document).ready(function() {
         $.getJSON('/api/' + endpoint)
           .done(function (data) {
             var relierClient = new FxaRelierClient({
-              window: window,
-              fxaHost: 'http://127.0.0.1:3030'
+              fxaHost: 'http://127.0.0.1:3030',
+              clientId: data.client_id
             });
-            relierClient.auth.lightbox[flow]().then(function (result) {
-              if (result.command === 'oauth_complete') {
-                document.location.href = result.data.redirect;
-              }
+
+            relierClient.auth.lightbox[flow]({
+              state: data.state,
+              scope: data.scope,
+              redirect_uri: data.redirect_uri
+            }).then(function (result) {
+              document.location.href = result.redirect;
             }, function (err) {
               console.log('iframe auth err: %s', JSON.stringify(err));
             });

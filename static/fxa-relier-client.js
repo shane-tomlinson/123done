@@ -1353,17 +1353,12 @@ define('client/auth/lightbox/lightbox',[
     return str;
   }
 
-  function getIframeSrc(host, page) {
-    return host + '/' + page;
-  }
-
 
   function Lightbox(options) {
     options = options || {};
 
     this._window = options.window;
-    this._iframeHost = options.iframeHost;
-    this._page = options.page;
+    this._src = options.src;
   }
 
   Lightbox.prototype = {
@@ -1381,7 +1376,7 @@ define('client/auth/lightbox/lightbox',[
 
       var iframe = createElement(this._window, 'iframe', {
         id: 'fxa',
-        src: getIframeSrc(this._iframeHost, this._page),
+        src: this._src,
         width: '600',
         height: '400',
         allowtransparency: 'true',
@@ -1542,15 +1537,36 @@ define('client/auth/lightbox/api',[
 ], function (p, Constants, Lightbox, IFrameChannel) {
   
 
-  function openLightbox(page) {
+  function createQueryParam(key, value) {
+    return key + '=' + encodeURIComponent(value);
+  }
+
+  function getLightboxSrc(host, page, clientId, state, scope, redirectUri, redirectTo) {
+    var src = host + '/' + page + '?';
+    var queryParams = [];
+
+    queryParams.push(createQueryParam('client_id', clientId));
+    queryParams.push(createQueryParam('state', state));
+    queryParams.push(createQueryParam('scope', scope));
+    queryParams.push(createQueryParam('redirect_uri', redirectUri));
+    /*queryParams.push(createQueryParam('redirectTo', redirectTo));*/
+
+    src += queryParams.join('&');
+    return src;
+  }
+
+  function openLightbox(page, options) {
+    options = options || {};
+
     /*jshint validthis: true*/
     if (this._lightbox) {
       return p.reject(new Error('lightbox already open'));
     }
 
     this._lightbox = new Lightbox({
-      iframeHost: this._fxaHost,
-      page: page,
+      src: getLightboxSrc(
+        this._fxaHost, page, this._clientId,
+          options.state, options.scope, options.redirect_uri, options.redirectTo),
       window: this._window
     });
     this._lightbox.load();
@@ -1566,6 +1582,9 @@ define('client/auth/lightbox/api',[
       .then(function (result) {
         self.unload();
         return result;
+      }, function (err) {
+        self.unload();
+        throw err;
       });
   }
 
@@ -1574,15 +1593,16 @@ define('client/auth/lightbox/api',[
 
     this._fxaHost = options.fxaHost || Constants.DEFAULT_FXA_HOST;
     this._window = options.window || window;
+    this._clientId = options.clientId;
   }
 
   LightboxAPI.prototype = {
-    signIn: function () {
-      return openLightbox.call(this, Constants.SIGNIN_ENDPOINT);
+    signIn: function (options) {
+      return openLightbox.call(this, Constants.SIGNIN_ENDPOINT, options);
     },
 
-    signUp: function () {
-      return openLightbox.call(this, Constants.SIGNUP_ENDPOINT);
+    signUp: function (options) {
+      return openLightbox.call(this, Constants.SIGNUP_ENDPOINT, options);
     },
 
     unload: function () {

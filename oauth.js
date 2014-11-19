@@ -37,12 +37,12 @@ function getOAuthInfo(action, nonce, email, preVerifyToken) {
     oauthParams.preVerifyToken = preVerifyToken;
   }
 
+  oauthParams.redirectUrl = redirectUrl(oauthParams);
+
   return oauthParams;
 }
 
-function redirectUrl(action, nonce, email, preVerifyToken) {
-  var oauthInfo = getOAuthInfo(action, nonce, email, preVerifyToken);
-
+function redirectUrl(oauthInfo) {
   return config.auth_uri + toQueryString(oauthInfo);
 }
 
@@ -68,16 +68,14 @@ module.exports = function(app, db) {
   // begin a new oauth log in flow
   app.get('/api/login', function(req, res) {
     var nonce = generateAndSaveNonce(req);
-    var url = redirectUrl("signin", nonce);
+    var oauthInfo = getOAuthInfo('signin', nonce);
     res.format({
       'text/html': function () {
-        res.redirect(url);
+        res.redirect(oauthInfo.redirectUrl);
       },
 
       'application/json': function () {
-        res.json({
-          redirect: url
-        });
+        res.json(oauthInfo);
       }
     });
   });
@@ -85,16 +83,14 @@ module.exports = function(app, db) {
   // begin a new oauth sign up flow
   app.get('/api/signup', function(req, res) {
     var nonce = generateAndSaveNonce(req);
-    var url = redirectUrl("signup", nonce);
+    var oauthInfo = getOAuthInfo('signup', nonce);
     res.format({
       'text/html': function () {
-        res.redirect(url);
+        res.redirect(oauthInfo.redirectUrl);
       },
 
       'application/json': function () {
-        res.json({
-          redirect: url
-        });
+        res.json(oauthInfo);
       }
     });
   });
@@ -107,8 +103,8 @@ module.exports = function(app, db) {
     preVerifyTokenGenerator.generate(email)
       .then(function (preVerifyToken) {
         var nonce = generateAndSaveNonce(req);
-        var url = redirectUrl("signup", nonce, email, preVerifyToken);
-        return res.redirect(url);
+        var oauthInfo = getOAuthInfo('signup', nonce, email, preVerifyToken);
+        return res.redirect(oauthInfo.redirectUrl);
       });
   });
 
